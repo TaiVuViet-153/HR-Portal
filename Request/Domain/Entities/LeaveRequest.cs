@@ -18,6 +18,7 @@ public sealed class LeaveRequest
 
 
     private LeaveRequest() { }
+    
     public LeaveRequest(int userId, RequestType type, DateTime? startDate, DateTime? endDate, bool? isHalf, string? reason)
     {
         UserID = userId;
@@ -30,6 +31,7 @@ public sealed class LeaveRequest
         CreatedAt = DateTime.UtcNow;
         IsActive = true;
     }
+
     public void UpdateType(RequestType type)
     {
         if (!Enum.IsDefined(typeof(RequestType), type)) return;
@@ -38,6 +40,7 @@ public sealed class LeaveRequest
         Type = type;
         UpdateNow();
     }
+
     public void UpdateSchedule(DateTime? startDate, DateTime? endDate, bool? isHalf)
     {
         // Apply only when value provided and different; update timestamp only if something changed
@@ -72,6 +75,7 @@ public sealed class LeaveRequest
 
         if (changed) UpdateNow();
     }
+
     public void UpdateReason(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason)) return;
@@ -80,6 +84,7 @@ public sealed class LeaveRequest
         Reason = reason;
         UpdateNow();
     }
+
     public void UpdateStatus(RequestStatus status)
     {
         if (!Enum.IsDefined(typeof(RequestStatus), status)) return;
@@ -88,11 +93,14 @@ public sealed class LeaveRequest
         Status = status;
         UpdateNow();
     }
+
     public void MarkAsDeleted()
     {
+        Status = RequestStatus.Deleted;
         IsActive = false;
         UpdateNow();
     }
+
     public void UpdateNow()
     {
         UpdatedAt = DateTime.UtcNow;

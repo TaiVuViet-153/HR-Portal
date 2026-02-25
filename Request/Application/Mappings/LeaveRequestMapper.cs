@@ -1,5 +1,4 @@
 using Request.Application.DTOs;
-using Request.Application.ValueObjects;
 using Request.Domain.Entities;
 using Request.Domain.ValueObjects;
 
@@ -34,28 +33,28 @@ public static class LeaveRequestMapper
 
         request.UpdateType((RequestType)dto.Type);
         request.UpdateSchedule(dto.StartDate, dto.EndDate, dto.IsHalfDayOff);
-        request.UpdateReason(dto.Reason);
-        request.UpdateStatus((RequestStatus)dto.Status);
+        request.UpdateReason(dto?.Reason ?? string.Empty);
+        request.UpdateStatus((RequestStatus)(dto?.Status ?? 0));
 
         return request;
     }
 
-    public static GetRequestResult ToViewModel(RequestResponse entity)
-    {
-        var res = new GetRequestResult
-        {
-            RequestId = entity.RequestId,
-            UserID = entity.UserID,
-            UserName = entity.UserName,
-            Type = Enum.GetName(typeof(RequestType), entity.Type),
-            StartDate = entity.StartDate,
-            EndDate = entity.EndDate,
-            IsHalfDayOff = entity.IsHalfDayOff,
-            Reason = entity.Reason,
-            Status = Enum.GetName(typeof(RequestStatus), entity.Status),
-            CreatedAt = entity.CreatedAt
-        };
+    // public static GetRequestResult ToViewModel(RequestResponse entity)
+    // {
+    //     var res = new GetRequestResult
+    //     {
+    //         RequestId = entity.RequestId,
+    //         UserID = entity.UserID,
+    //         UserName = entity.UserName,
+    //         Type = entity.Type,
+    //         StartDate = entity.StartDate,
+    //         EndDate = entity.EndDate,
+    //         IsHalfDayOff = entity.IsHalfDayOff,
+    //         Reason = entity.Reason,
+    //         Status = entity.Status,
+    //         CreatedAt = entity.CreatedAt
+    //     };
 
-        return res;
-    }
+    //     return res;
+    // }
 }

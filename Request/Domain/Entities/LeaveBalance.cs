@@ -13,6 +13,7 @@ public sealed class LeaveBalance
     public DateTime? UpdatedAt { get; set; }
 
     private LeaveBalance() { }
+
     public LeaveBalance(int userId, RequestType type, double balance)
     {
         UserID = userId;
@@ -21,7 +22,17 @@ public sealed class LeaveBalance
         Balance = balance;
         CreatedAt = DateTime.UtcNow;
     }
-    public void UpdateBalance(double amount)
+
+    public void SetBalance(double newBalance)
+    {
+        if (double.IsNaN(newBalance) || double.IsInfinity(newBalance)) return;
+        if (newBalance < 0) return; // Prevent negative balance
+
+        Balance = newBalance;
+        UpdateNow();
+    }
+
+    public void DecreaseBalance(double amount)
     {
         // Validate amount
         if (double.IsNaN(amount) || double.IsInfinity(amount)) return;
@@ -31,16 +42,24 @@ public sealed class LeaveBalance
         if (Math.Abs(amount) > MaxSingleAdjustment) return;
 
         var newBalance = Balance - amount;
+        if (newBalance < 0) return; // Prevent negative balance
 
         Balance = newBalance;
         UpdateNow();
     }
+
     public void UpdateNow()
     {
         UpdatedAt = DateTime.UtcNow;
     }
+
     public bool HasEnoughDays(double leaveDays)
     {
         return Balance >= leaveDays;
+    }
+
+    public bool IsNegativeBalance()
+    {
+        return Balance < 0;
     }
 }
