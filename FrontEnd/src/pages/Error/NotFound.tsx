@@ -1,4 +1,4 @@
-import { useAuth } from '@/core/Auth/AuthContext';
+import { useAuth } from '@/core/auth/AuthContext';
 import { FileQuestion } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

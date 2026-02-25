@@ -13,7 +13,7 @@ export const setupInterceptors = (
         const accessToken = getAccessToken();
         
         // If we don't have a token, attempt to refresh before proceeding (but skip if this is the refresh endpoint)
-        const refreshEndpoint = '/api/Auth/refresh';
+        const refreshEndpoint = 'Auth/refresh';
         
         if (!accessToken && config.url && !config.url.includes(refreshEndpoint)) {
             try {
@@ -62,7 +62,7 @@ export const setupInterceptors = (
         async (error) => {
             const originalRequest = error.config as any;
 
-            const refreshEndpoint = '/api/Auth/refresh';
+            const refreshEndpoint = 'Auth/refresh';
             if (originalRequest?.url?.includes && originalRequest.url.includes(refreshEndpoint)) {
                 onRefreshFail();
                 return Promise.reject(error);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Select from 'react-select';
 
 type Option = { value: string; label: string };
@@ -10,6 +10,7 @@ type Props = {
   placeholder?: string;
   isClearable?: boolean;
   isDisabled?: boolean;
+  isRequired?: boolean;
   onChange?: (value?: string) => void;
 };
 
@@ -40,12 +41,14 @@ export default function SelectCommon({ name, options, defaultValue, placeholder,
         }}
         classNames={{
           control: (state) =>
-            `!min-h-[44px] !rounded-xl !border !border-gray-200 !shadow-sm ${state.isFocused ? '!ring-2 !ring-blue-500 !border-transparent' : ''}`,
+            `!min-h-[44px] !rounded-xl !border !border-gray-200 !shadow-sm 
+            ${state.isFocused ? '!ring-2 !ring-blue-500 !border-transparent' : ''}
+            ${state.isDisabled ? '!bg-gray-100 !cursor-not-allowed' : ''}`,
           placeholder: () => '!text-gray-400',
           singleValue: () => '!text-gray-700 !font-medium',
           menu: () => '!rounded-xl !shadow-lg !border !border-gray-100',
           option: (state) =>
-            `!text-sm !py-2 ${state.isFocused ? '!bg-blue-50 !text-blue-600' : '!text-gray-700'}`
+            `!text-sm !py-2 ${state.isFocused ? '!bg-blue-50 !text-blue-600' : '!text-gray-700'}`,
         }}
       />
       <input type="hidden" name={name} value={hiddenValue} />

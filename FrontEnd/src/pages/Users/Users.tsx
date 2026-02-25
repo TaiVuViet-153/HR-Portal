@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Edit2, Trash2, Eye, Lock, KeyRound } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Lock, KeyRound, Key } from 'lucide-react';
 import type { UserWithDetail, GetUsersQuery } from '@/pages/Users/UsersType';
 import { getUsers, createUser, updateUser, deleteUser, resetPassword, lockUser } from './UserApi';
 import { useAuth } from '@/core/auth/AuthContext';
@@ -10,6 +10,7 @@ import UserDetailModal from './UserDetailModal';
 import UserFormModal from './UserFormModal';
 import UserDeleteModal from './UserDeleteModal';
 import UserProfile from './UserProfile';
+import ChangePasswordModal from './ChangePasswordModal';
 import { SortByOptions, SortDirOptions, UserStatus, isLocked } from './UsersData';
 
 export default function EmployeeList() {
@@ -21,7 +22,7 @@ export default function EmployeeList() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [modalType, setModalType] = useState<'create' | 'edit' | 'detail' | 'delete' | null>(null);
+  const [modalType, setModalType] = useState<'create' | 'edit' | 'detail' | 'delete' | 'changePassword' | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserWithDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -234,13 +235,22 @@ export default function EmployeeList() {
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Employees</h1>
           <p className="text-gray-500 font-medium">Directory of all team members and their roles.</p>
         </div>
-        <button 
-          onClick={() => setModalType('create')}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 cursor-pointer"
-        >
-          <Plus size={20} />
-          <span>Add Employee</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setModalType('changePassword')}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 cursor-pointer"
+          >
+            <Key size={20} />
+            <span>Change Password</span>
+          </button>
+          <button 
+            onClick={() => setModalType('create')}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 cursor-pointer"
+          >
+            <Plus size={20} />
+            <span>Add Employee</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -359,9 +369,8 @@ export default function EmployeeList() {
                       </button>
                       <button 
                         onClick={() => handleResetPassword(user.userID)} 
-                        className={`p-3 rounded-xl transition-all ${isLocked(user.status) ? 'text-gray-400 cursor-not-allowed opacity-60' : 'text-amber-500 hover:bg-amber-50 cursor-pointer'}`}
+                        className={`p-3 rounded-xl transition-all text-amber-500 hover:bg-amber-50 cursor-pointer`}
                         title="Reset password"
-                        disabled={isLocked(user.status)}
                       >
                         <KeyRound size={20} />
                       </button>
@@ -445,6 +454,11 @@ export default function EmployeeList() {
         onClose={handleClose}
         onConfirm={handleDelete}
         userName={selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : undefined}
+      />
+
+      <ChangePasswordModal
+        isOpen={modalType === 'changePassword'}
+        onClose={handleClose}
       />
     </div>
   );

@@ -23,22 +23,39 @@ export const getTypeKey = (value: number): string => {
 };
 
 // Helper: kiểm tra status
-export const isPending = (status: string | number): boolean => {
-    if (typeof status === 'number') return status === RequestStatuses.Pending;
-    return status === 'Pending';
+export const isPending = (status: number): boolean => {
+    return status === RequestStatuses.Pending;
 };
 
-export const isApproved = (status: string | number): boolean => {
-    if (typeof status === 'number') return status === RequestStatuses.Approved;
-    return status === 'Approved';
+export const isApproved = (status: number): boolean => {
+    return status === RequestStatuses.Approved;
 };
 
-export const isRejected = (status: string | number): boolean => {
-    if (typeof status === 'number') return status === RequestStatuses.Rejected;
-    return status === 'Rejected';
+export const isRejected = (status: number): boolean => {
+    return status === RequestStatuses.Rejected;
 };
 
-export const isCancelled = (status: string | number): boolean => {
-    if (typeof status === 'number') return status === RequestStatuses.Cancelled;
-    return status === 'Cancelled';
+export const isCancelled = (status: number): boolean => {
+    return status === RequestStatuses.Cancelled;
 };
+
+// Helper: kiểm tra type
+export const isUnpaid = (type: number): boolean => {
+    return type === RequestTypes.Unpaid;
+}
+
+export const isPaid = (type: number): boolean => {
+    return type === RequestTypes.Paid;
+}
+
+export const isMaternity = (type: number): boolean => {
+    return type === RequestTypes.Maternity;
+}
+
+export const isWedding = (type: number): boolean => {
+    return type === RequestTypes.Wedding;
+}
+
+export const isBereavement = (type: number): boolean => {
+    return type === RequestTypes.Bereavement;
+}

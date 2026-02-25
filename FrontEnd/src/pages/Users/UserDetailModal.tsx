@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Mail, Phone, MapPin, Calendar, User, Briefcase } from 'lucide-react';
 import type { UserWithDetail } from './UsersType';
 import { DetailField, StatusBadge, DetailSection } from './UserDetailField';

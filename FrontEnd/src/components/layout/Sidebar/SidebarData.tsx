@@ -22,10 +22,10 @@ export const SidebarData: SidebarMenuItem[] = [
         label: "Leave Requests",
         roles: ['ADMIN', 'USER']
     },
-    // {
-    //     to: "/balances",
-    //     icon: Archive,
-    //     label: "Leave Balances",
-    //     roles: ['ADMIN']
-    // }
+    {
+        to: "/balances",
+        icon: Archive,
+        label: "Leave Balances",
+        roles: ['ADMIN', 'USER']
+    }
 ];

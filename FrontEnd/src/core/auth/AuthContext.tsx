@@ -76,7 +76,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         refreshInProgress.current = true;
         const p = (async () => {
             try {
-                const res = await authApi.post('/api/Auth/refresh', undefined, { withCredentials: true });
+                const res = await authApi.post('Auth/refresh', undefined, { withCredentials: true });
                 const data: LoginPayload = res.data;
                 
                 return data;

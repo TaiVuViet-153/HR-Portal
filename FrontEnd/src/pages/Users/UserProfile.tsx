@@ -59,29 +59,6 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const currentPassword = formData.get('currentPassword')?.toString();
-    const newPassword = formData.get('newPassword')?.toString();
-    const confirmPassword = formData.get('confirmPassword')?.toString();
-
-    if (newPassword !== confirmPassword) {
-      setError("New password and confirm password do not match");
-      return;
-    }
-
-    if (user && currentPassword && newPassword) {
-      const result = await updateUser(user, formData);
-      if (result?.isSuccess) {
-        setSuccessMessage("Password changed successfully!");
-        handleClose();
-      } else {
-        setError(result?.message || "Change password failed");
-      }
-    }
-  };
-
   const getAvatarUrl = () => {
     if (user?.detail?.UserPhoto) {
       return `data:image/jpeg;base64,${user.detail.UserPhoto}`;
@@ -285,8 +262,6 @@ const UserProfile: React.FC = () => {
       <ChangePasswordModal
         isOpen={modalType === 'changePassword'}
         onClose={handleClose}
-        onSubmit={handleChangePassword}
-        error={error}
       />
     </div>
   );
