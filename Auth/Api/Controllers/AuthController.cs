@@ -5,19 +5,16 @@ namespace Auth.Api.Controllers
     using Auth.Application.Services.Interfaces;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
-    using Shared.Notifications.Teams;
 
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly INotifier notifier;
 
         private readonly IAuthService authService;
 
-        public AuthController(INotifier _notifier, IAuthService _authService)
+        public AuthController(IAuthService _authService)
         {
-            notifier = _notifier;
             authService = _authService;
         }
 
@@ -26,26 +23,27 @@ namespace Auth.Api.Controllers
         {
             var result = await authService.Login(loginRequest);
 
-            SetRefreshTokenCookie(result.UserResult.RefreshToken);
-
-            if (string.IsNullOrEmpty(result.errorMessage))
+            if (result != null && string.IsNullOrEmpty(result.errorMessage))
             {
+                SetRefreshTokenCookie(result.UserResult?.RefreshToken ?? string.Empty);
+
                 var res = new LoginResponse
                 {
-                    AccessToken = result.UserResult.AccessToken,
+                    AccessToken = result.UserResult?.AccessToken ?? string.Empty,
+
                     User = new UserResponse
                     {
-                        Id = result.UserResult.UserId.ToString(),
-                        Name = result.UserResult.Username,
-                        Roles = result.UserResult.Roles
+                        Id = result.UserResult?.UserId.ToString() ?? string.Empty,
+                        Name = result.UserResult?.Username ?? string.Empty,
+                        Roles = result.UserResult?.Roles ?? string.Empty
                     },
-                    IsRequiredChangePW = result.UserResult.requiredChangePW ?? false
+                    IsRequiredChangePW = result.UserResult?.requiredChangePW ?? false
                 };
 
                 return Ok(res);
             }
 
-            return BadRequest(result.errorMessage);
+            return BadRequest(result?.errorMessage);
         }
 
         // [HttpPost("register")]
@@ -100,16 +98,16 @@ namespace Auth.Api.Controllers
                 if (result == null)
                     return Unauthorized();
 
-                SetRefreshTokenCookie(result.UserResult.RefreshToken);
+                SetRefreshTokenCookie(result.UserResult?.RefreshToken ?? string.Empty);
 
                 var res = new LoginResponse
                 {
-                    AccessToken = result.UserResult.AccessToken,
+                    AccessToken = result.UserResult?.AccessToken ?? string.Empty,
                     User = new UserResponse
                     {
-                        Id = result.UserResult.UserId.ToString(),
-                        Name = result.UserResult.Username,
-                        Roles = result.UserResult.Roles
+                        Id = result.UserResult?.UserId.ToString() ?? string.Empty,
+                        Name = result.UserResult?.Username ?? string.Empty,
+                        Roles = result.UserResult?.Roles ?? string.Empty
                     }
                 };
                 return Ok(res);

@@ -111,6 +111,10 @@ public class AuthService(
         // generate new refresh token
         var newRefreshToken = tokenService.GenerateRefreshToken();
         var user = await authRepository.GetByUserIdAsync(token.UserID);
+
+        if (user == null)
+            throw new Exception("No user to revoke old refresh token");
+
         var newAccessToken = await tokenService.GenerateAccessToken(user);
 
 
