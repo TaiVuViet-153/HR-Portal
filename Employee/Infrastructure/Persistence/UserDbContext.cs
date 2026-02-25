@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Employee.Domain.Entities;
+using Employee.Application.Interfaces;
 
 namespace Employee.Infrastructure.Persistence;
 
-public class UserDbContext : DbContext
+public class UserDbContext : DbContext, IUnitOfWork
 {
     public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
     {

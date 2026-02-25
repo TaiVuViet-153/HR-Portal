@@ -5,6 +5,7 @@ using Employee.Application.Repositories.Queries;
 using Employee.Application.Interfaces;
 using Employee.Infrastructure.Services.Email;
 using Microsoft.Extensions.Configuration;
+using Employee.Infrastructure.Persistence;
 
 namespace Employee.Infrastructure;
 
@@ -21,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IUserQueriesRepository, UserRepository>();
         services.AddScoped<IEmailSender, GraphEmailSender>();
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
+
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UserDbContext>());
 
         return services;
     }

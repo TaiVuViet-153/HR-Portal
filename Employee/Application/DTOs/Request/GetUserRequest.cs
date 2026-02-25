@@ -1,4 +1,4 @@
-using Request.Common.Paging;
+using Shared.Abstractions.Paging;
 
 namespace Employee.Application.DTOs.Request;
 

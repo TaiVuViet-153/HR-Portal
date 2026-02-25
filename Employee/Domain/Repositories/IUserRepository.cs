@@ -1,6 +1,4 @@
 using Employee.Domain.Entities;
-using Employee.Domain.Specifications;
-using Employee.Domain.ValueObjects;
 
 namespace Employee.Domain.Repositories;
 
@@ -11,5 +9,6 @@ public interface IUserRepository
     Task<int> CreateAsync(User user);
     Task<User?> UpdateAsync(User user);
     Task<bool> DeleteAsync(int id);
+    Task<bool> AddRoleToCreatedUser(int userId);
     Task<int> SaveChangesAsync();
 }

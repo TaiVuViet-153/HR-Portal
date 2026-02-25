@@ -1,37 +1,39 @@
-using System.Net.WebSockets;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Employee.Application.DTOs.Request;
 using Employee.Application.DTOs.Response;
+using Employee.Application.Interfaces;
 using Employee.Application.Repositories.Queries;
 using Employee.Domain.Entities;
 using Employee.Domain.Repositories;
 using Employee.Domain.ValueObjects;
 using Employee.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Request.Common.Paging;
+using Shared.Abstractions.Paging;
+using Shared.Infrastructures.EFCore;
 
 namespace Employee.Infrastructure.Repositories;
 
 public class UserRepository(
-    UserDbContext _context
+    UserDbContext _context,
+    IUnitOfWork _uow
 ) : IUserRepository, IUserQueriesRepository
 {
     public async Task<IEnumerable<User>> GetAllAsync()
     {
         return await _context.Users.ToListAsync();
     }
-    public IQueryable<User> GetAll(GetUserRequest? request)
+    public async Task<PagedResult<GetUserResponse>> GetAll(GetUserRequest? request)
     {
         var users = _context.Users.AsQueryable();
-        Console.WriteLine($"Initial Users Count: {users.Count()}");
-        users = ApplyFilter(users, request);
-        users = ApplySorting(users, request);
 
-        return users;
+        users = FilteredUser(users, request);
+        users = SortedUser(users, request);
+
+        var joinedQuery = IncludeRolesAndBalances(users);
+
+        return await PagingUser(joinedQuery, request);
     }
 
-    public IQueryable<GetUserResponse> IncludeRolesAndBalances(IQueryable<User> query)
+    private IQueryable<GetUserResponse> IncludeRolesAndBalances(IQueryable<User> query)
     {
         var rolesGroup = from ur in _context.UserRoles
                          join r in _context.Roles on ur.RoleID equals r.Id
@@ -42,21 +44,9 @@ public class UserRepository(
                              Roles = grouped.Select(x => x.Code).Distinct().ToList()
                          };
 
-        // var balancesGroup = from b in _context.LeaveBalances
-        //                     group b by new { b.UserID, b.Type, b.Year } into grouped
-        //                     select new
-        //                     {
-        //                         UserID = grouped.Key.UserID,
-        //                         LeaveType = grouped.Key.Type,
-        //                         SourceYear = grouped.Key.Year,
-        //                         TotalBalance = grouped.Sum(x => x.Balance)
-        //                     };
-
         var joinedQuery = from u in query
                           join rg in rolesGroup on u.UserID equals rg.UserID into userRoles
                           from rg in userRoles.DefaultIfEmpty()
-                              //   join bg in balancesGroup on u.UserID equals bg.UserID into userBalances
-                              //   from bg in userBalances.DefaultIfEmpty()
                           select new GetUserResponse
                           {
                               UserID = u.UserID,
@@ -76,7 +66,7 @@ public class UserRepository(
                                 ))
                                 .ToList()
                           };
-        Console.WriteLine($"Joined Query: {joinedQuery.Count()}");
+
         return joinedQuery;
     }
 
@@ -85,9 +75,13 @@ public class UserRepository(
         return await _context.Users.FirstOrDefaultAsync(u => u.UserID == id);
     }
 
-    public IQueryable<User> GetById(int userId)
+    public GetUserResponse? GetById(int userId)
     {
-        return _context.Users.Where(u => u.UserID == userId).AsQueryable();
+        var data = _context.Users.Where(u => u.UserID == userId).AsQueryable();
+
+        var joinedQuery = IncludeRolesAndBalances(data);
+
+        return joinedQuery.FirstOrDefault();
     }
 
     public async Task<int> CreateAsync(User user)
@@ -114,7 +108,26 @@ public class UserRepository(
         return await SaveChangesAsync() > 0 ? true : false;
     }
 
-    private IQueryable<User> ApplyFilter(IQueryable<User> data, GetUserRequest? request)
+    public async Task<bool> AddRoleToCreatedUser(int userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+        if (user == null) return false;
+
+        var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.Code == "USER");
+        if (defaultRole == null) return false;
+
+        var userRole = new UserRole
+        (
+            userId,
+            defaultRole.Id
+        );
+
+        _context.UserRoles.Add(userRole);
+
+        return await SaveChangesAsync() > 0 ? true : false;
+    }
+
+    private IQueryable<User> FilteredUser(IQueryable<User> data, GetUserRequest? request)
     {
         if (request == null) return data;
 
@@ -133,49 +146,39 @@ public class UserRepository(
         return data;
     }
 
-    private IQueryable<User> ApplySorting(IQueryable<User> query, GetUserRequest? request)
+    private IQueryable<User> SortedUser(IQueryable<User> data, GetUserRequest? query)
     {
-        var page = request?.Page ?? PagingQuery.DefaultPage;
-        var pageSize = request?.PageSize ?? PagingQuery.DefaultPageSize;
+        if (query == null) return data.OrderByDescending(x => x.CreatedDate);
 
-        if (page <= 0) page = PagingQuery.DefaultPage;
-        if (pageSize <= 0) pageSize = PagingQuery.DefaultPageSize;
+        var sortBy = string.IsNullOrWhiteSpace(query.SortBy) ? "createddate" : query.SortBy.ToLower();
+        var ascending = query.SortDir == 1;
 
-        // if (!string.IsNullOrWhiteSpace(request?.SortBy))
-        // {
-        //     query = request.IsAscending
-        //         ? query.OrderBy(e => EF.Property<object>(e, request.SortBy))
-        //         : query.OrderByDescending(e => EF.Property<object>(e, request.SortBy));
-        // }
-        // else
-        // {
-        //     query = request.IsAscending
-        //         ? query.OrderBy(e => e.CreatedDate)
-        //         : query.OrderByDescending(e => e.CreatedDate);
-        // }
-
-        if (!string.IsNullOrWhiteSpace(request?.SortBy))
+        return sortBy switch
         {
-            Console.WriteLine($"Sorting By: {request.SortBy}, Ascending: {request.IsAscending}");
-            query = request.SortBy.ToLower() switch
-            {
-                "username" => request.IsAscending
-                    ? query.OrderBy(e => e.UserName)
-                    : query.OrderByDescending(e => e.UserName),
-                "email" => request.IsAscending
-                    ? query.OrderBy(e => e.Email)
-                    : query.OrderByDescending(e => e.Email),
-                _ => request.IsAscending
-                    ? query.OrderBy(e => e.CreatedDate)
-                    : query.OrderByDescending(e => e.CreatedDate),
-            };
-        }
+            "username" => ascending ? data.OrderBy(x => x.UserName) : data.OrderByDescending(x => x.UserName),
+            "email" => ascending ? data.OrderBy(x => x.Email) : data.OrderByDescending(x => x.Email),
+            _ => ascending ? data.OrderBy(x => x.CreatedDate) : data.OrderByDescending(x => x.CreatedDate)
+        };
+    }
 
-        return query;
+    private async Task<PagedResult<GetUserResponse>> PagingUser(IQueryable<GetUserResponse> data, GetUserRequest? query)
+    {
+        var emptyResult = new PagedResult<GetUserResponse>
+        {
+            Items = new List<GetUserResponse>(),
+            Page = query?.Page ?? 0,
+            PageSize = query?.PageSize ?? 0,
+            TotalItems = 0
+        };
+
+        if (data == null || !data.Any())
+            return emptyResult;
+
+        return await data.ToPagedResultAsync(query);
     }
 
     public async Task<int> SaveChangesAsync()
     {
-        return await _context.SaveChangesAsync();
+        return await _uow.SaveChangesAsync();
     }
 }

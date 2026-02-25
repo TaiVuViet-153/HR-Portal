@@ -1,5 +1,3 @@
-using Employee.Domain.ValueObjects;
-
 namespace Employee.Application.DTOs.Request;
 
 public sealed record UpdateUserRequest

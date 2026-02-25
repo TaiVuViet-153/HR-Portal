@@ -1,4 +1,3 @@
-using System.Reflection.Metadata.Ecma335;
 using System.Text.Json.Nodes;
 using Employee.Application.DTOs;
 using Employee.Application.DTOs.Request;
@@ -7,15 +6,13 @@ using Employee.Application.Repositories.Queries;
 using Employee.Application.Interfaces;
 using Employee.Domain.Entities;
 using Employee.Domain.Repositories;
-using Microsoft.AspNetCore.Mvc;
-using Request.Common.Paging;
 using Request.Application.DTOs;
 using System.Security.Cryptography;
 using Employee.Application.Mapping;
 using Employee.Domain.ValueObjects;
 using Employee.Application.Extensions;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+using Shared.Abstractions.Paging;
 
 namespace Employee.Application.Services;
 
@@ -27,24 +24,20 @@ public class UserService(
 ) : IUserService
 {
 
-    public async Task<PagedResult<GetUserResponse>> GetAllAsync([FromQuery] GetUserRequest? request)
+    public async Task<PagedResult<GetUserResponse>> GetAllAsync(GetUserRequest? request)
     {
-        var query = userQueriesRepository.GetAll(request);
-        var joinedQuery = userQueriesRepository.IncludeRolesAndBalances(query);
-        var pagedEntities = await joinedQuery.ToPagedResultAsync(request);
+        var data = await userQueriesRepository.GetAll(request);
 
-        var parsedItems = ParseUserListDetails(pagedEntities.Items);
+        var parsedItems = ParseUserListDetails(data.Items);
 
-        return pagedEntities.WithItems(parsedItems);
+        return data.WithItems(parsedItems);
     }
 
-    public async Task<GetUserResponse> GetByIdAsync(int id)
+    public async Task<GetUserResponse?> GetByIdAsync(int id)
     {
-        var query = userQueriesRepository.GetById(id);
+        var data = userQueriesRepository.GetById(id);
 
-        var joinedQuery = await userQueriesRepository.IncludeRolesAndBalances(query).FirstOrDefaultAsync();
-
-        var parsedUser = ParseUserDetail(joinedQuery);
+        var parsedUser = ParseUserDetail(data);
 
         return parsedUser;
 
@@ -57,13 +50,16 @@ public class UserService(
         var user = new User(dto.UserName, dto.Email, randomPassword);
 
         var created = await userRepository.CreateAsync(user);
-
         if (created == 0)
             return new UserResponse<CreateUserResponse>(false, "Failed to create user.");
 
         var createdUser = await userRepository.GetByIdAsync(created);
         if (createdUser is null)
             return new UserResponse<CreateUserResponse>(false, "Failed to retrieve created user.");
+
+        var roleAdded = await userRepository.AddRoleToCreatedUser(created);
+        if (!roleAdded)
+            return new UserResponse<CreateUserResponse>(false, "Failed to assign role to created user.");
 
         // Send welcome email
         var emailTemplate = emailTemplateService.GetUserCreatedTemplate(dto.UserName, dto.Email, randomPassword);
@@ -74,7 +70,7 @@ public class UserService(
         return new UserResponse<CreateUserResponse>(true, "User created successfully.", response);
     }
 
-    public async Task<UserResponse<UpdateUserResponse>> UpdateAsync(UpdateUserRequest dto)
+    public async Task<UserResponse<UpdateUserResponse>?> UpdateAsync(UpdateUserRequest dto)
     {
         var existingUser = await userRepository.GetByIdAsync(dto.UserID);
         if (existingUser == null)
@@ -132,6 +128,7 @@ public class UserService(
         var newPassword = GenerateRandomPassword();
         user.ResetFailedLoginCount();
         user.SetPassword(newPassword);
+        user.SetRequiredChangePW(true);
 
         var updatedUser = await userRepository.UpdateAsync(user);
         if (updatedUser == null)
@@ -143,22 +140,6 @@ public class UserService(
 
         return new UserResponse<string>(true, "Password reset successfully.", newPassword);
     }
-
-    // public async Task<UserResponse<int?>> IncrementFailedLoginCountAsync(int id)
-    // {
-    //     var user = await userRepository.GetByIdAsync(id);
-    //     if (user == null)
-    //         return new UserResponse<int?>(false, "User not found.");
-
-    //     user.IncrementFailedLoginCount();
-
-    //     var updatedUser = await userRepository.UpdateAsync(user);
-    //     if (updatedUser == null)
-    //         return new UserResponse<int?>(false, "Failed to increment failed login count.", updatedUser.FailedLoginCount);
-
-
-    //     return new UserResponse<int?>(true, "Incremented failed login count successfully.", updatedUser.FailedLoginCount);
-    // }
 
     public async Task<UserResponse<bool>> LockUserAsync(int id)
     {
@@ -200,9 +181,9 @@ public class UserService(
         return users.ToList();
     }
 
-    private GetUserResponse ParseUserDetail(GetUserResponse user)
+    private GetUserResponse? ParseUserDetail(GetUserResponse? user)
     {
-        if (string.IsNullOrEmpty(user.Detail)) return user;
+        if (string.IsNullOrEmpty(user?.Detail)) return user;
 
         var detailObj = JsonNode.Parse(user.Detail);
         if (detailObj == null) return user;

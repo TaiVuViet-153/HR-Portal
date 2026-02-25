@@ -28,6 +28,7 @@ public sealed class User
         ModifiedDate = DateTime.UtcNow;
         Status = UserStatus.Newly_Created;
         FailedLoginCount = 0;
+        RequiredChangePW = true;
         SetPassword(inputPassword);
     }
 
