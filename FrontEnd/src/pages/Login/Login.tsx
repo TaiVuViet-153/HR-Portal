@@ -45,7 +45,6 @@ export function Login() {
 
   };
 
-  console.log("Test login page render");
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="max-w-md w-full">

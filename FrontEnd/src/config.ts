@@ -7,7 +7,7 @@ const required = (value: string | undefined, name: string, fallback?: string) =>
 	throw new Error(`[config] Missing required env: ${name}`);
 };
 
-export const AUTH_BASE_URL = required(import.meta.env.VITE_AUTH_BASE_URL as string | undefined, 'VITE_AUTH_BASE_URL', 'https://localhost:7215');
+export const AUTH_BASE_URL = required(import.meta.env.VITE_AUTH_BASE_URL as string | undefined, 'VITE_AUTH_BASE_URL');
 export const REQUEST_BASE_URL = required(import.meta.env.VITE_REQUEST_BASE_URL as string | undefined, 'VITE_REQUEST_BASE_URL');
 export const EMPLOYEE_BASE_URL = required(import.meta.env.VITE_EMPLOYEE_BASE_URL as string | undefined, 'VITE_EMPLOYEE_BASE_URL');
 
