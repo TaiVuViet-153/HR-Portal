@@ -24,22 +24,21 @@ export function Login() {
     setLoading(true);
 
     try {
-      const { accessToken, user, isRequireChangedPW } = await loginApi(username, password);
+      const { accessToken, user, isRequiredChangePW } = await loginApi(username, password);
 
       login({ accessToken, user });
-      
-      if (isRequireChangedPW) {
+      console.log(isRequiredChangePW);
+      if (isRequiredChangePW) {
+        
         navigate('/change-password', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
     } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Đăng nhập thất bại. Vui lòng thử lại.';
+      // Error message đã được xử lý trong loginApi và throw dưới dạng Error(message)
+      const message = err?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
       setError(message);
-      console.error(err);
+      console.error("Login failed:", err);
     } finally {
       setLoading(false);
     }

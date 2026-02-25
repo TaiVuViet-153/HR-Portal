@@ -1,7 +1,8 @@
 import Modal from '@/components/common/Modal';
 import { DetailField, DetailSection, StatusBadge } from '@/pages/Requests/DetailField';
-import { User, Calendar, FileText, Clock, CheckCircle } from 'lucide-react';
+import { User, Calendar, FileText, Clock } from 'lucide-react';
 import type { LeaveRequestResponse } from '@/pages/Requests/LeaveRequestsType';
+import { getTypeKey } from './LeaveRequestsData';
 
 type LeaveRequestDetailModalProps = {
     isOpen: boolean;
@@ -44,7 +45,7 @@ export default function LeaveRequestDetailModal({ isOpen, onClose, request }: Le
                         label="Leave Type"
                         value={
                             <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium text-sm">
-                                {request.type}
+                                {getTypeKey(request.type)}
                             </span>
                         }
                     />

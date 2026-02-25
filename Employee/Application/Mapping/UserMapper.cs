@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Employee.Application.DTOs.Request;
 using Employee.Application.DTOs.Response;
 using Employee.Domain.Entities;
@@ -54,6 +53,7 @@ public static class UserMapper
             if (string.IsNullOrEmpty(error))
             {
                 user.SetPassword(dto.NewPassword);
+                user.SetRequiredChangePW(false);
                 changed = true;
             }
         }

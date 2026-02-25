@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Shared.Notifications.Teams;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -120,16 +119,6 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
-// Named HttpClient cho Teams webhook (tắt auto redirect để tránh POST -> GET)
-builder.Services.AddHttpClient("teams-webhook")
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-    {
-        AllowAutoRedirect = false,         // tránh đổi phương thức
-        AutomaticDecompression = DecompressionMethods.All
-    });
-// Bind INotifier -> TeamsNotifier
-builder.Services.AddScoped<INotifier, TeamsNotifier>();
 
 
 // (khuyên dùng) Bật validation DI khi build để bắt lỗi thiếu service sớm

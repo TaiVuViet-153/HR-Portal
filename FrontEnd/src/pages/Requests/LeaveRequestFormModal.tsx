@@ -47,7 +47,7 @@ export default function LeaveRequestFormModal({
                     <button 
                         form="leave-form" 
                         type="submit" 
-                        className="px-6 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                        className="px-6 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 cursor-pointer"
                     >
                         Submit Request
                     </button>

@@ -42,149 +42,187 @@ export default function UserFormModal({ isOpen, onClose, onSubmit, mode, user, e
 
         {/* Form */}
         <form onSubmit={onSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Username */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Username <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="userName"
-                type="text"
-                required
-                disabled
-                defaultValue={user?.userName || ''}
-                placeholder="Enter username"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-not-allowed"
-              />
-            </div>
-
-            {/* Email */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="email"
-                type="email"
-                required
-                defaultValue={user?.email || ''}
-                placeholder="Enter email address"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* First Name */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                First Name
-              </label>
-              <input
-                name="firstName"
-                type="text"
-                defaultValue={user?.firstName || ''}
-                placeholder="Enter first name"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Last Name */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Last Name
-              </label>
-              <input
-                name="lastName"
-                type="text"
-                defaultValue={user?.lastName || ''}
-                placeholder="Enter last name"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Phone Number
-              </label>
-              <input
-                name="phoneNumber"
-                type="tel"
-                defaultValue={user?.phoneNumber || ''}
-                placeholder="Enter phone number"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Birth Date */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Birth Date
-              </label>
-              <DatePickerCommon
-                name="birthDate"
-                defaultValue={user?.birthDate}
-                disablePast={false}
-              />
-            </div>
-
-            {/* Address */}
-            <div className="flex flex-col md:col-span-2">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Address
-              </label>
-              <input
-                name="address"
-                type="text"
-                defaultValue={user?.address || ''}
-                placeholder="Enter address"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Location */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Location
-              </label>
-              <input
-                name="location"
-                type="text"
-                defaultValue={user?.location || ''}
-                placeholder="Enter location"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Time Zone */}
-            <div className="flex flex-col">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Time Zone
-              </label>
-              <input
-                name="timeZone"
-                type="text"
-                defaultValue={user?.timeZone || ''}
-                placeholder="e.g., UTC+7"
-                className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Status - Only for edit mode */}
-            {mode === 'edit' && state.user?.roles?.includes('ADMIN') && (
+          {/* Create Mode - Only Username and Email */}
+          {mode === 'create' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Username */}
               <div className="flex flex-col">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Status
+                  Username <span className="text-red-500">*</span>
                 </label>
-                <SelectCommon
-                  name="status"
-                  options={UserStatus}
-                  defaultValue={user?.status?.toString()}
-                  placeholder="Select status"
+                <input
+                  name="userName"
+                  type="text"
+                  required
+                  defaultValue={user?.userName || ''}
+                  placeholder="Enter username"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-            )}
-          </div>
+
+              {/* Email */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  defaultValue={user?.email || ''}
+                  placeholder="Enter email address"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Edit Mode - All Fields */}
+          {mode === 'edit' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Username */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="userName"
+                  type="text"
+                  required
+                  disabled
+                  defaultValue={user?.userName || ''}
+                  placeholder="Enter username"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-not-allowed"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  defaultValue={user?.email || ''}
+                  placeholder="Enter email address"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* First Name */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  First Name
+                </label>
+                <input
+                  name="firstName"
+                  type="text"
+                  defaultValue={user?.firstName || ''}
+                  placeholder="Enter first name"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Last Name */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Last Name
+                </label>
+                <input
+                  name="lastName"
+                  type="text"
+                  defaultValue={user?.lastName || ''}
+                  placeholder="Enter last name"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Phone Number
+                </label>
+                <input
+                  name="phoneNumber"
+                  type="tel"
+                  defaultValue={user?.phoneNumber || ''}
+                  placeholder="Enter phone number"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Birth Date */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Birth Date
+                </label>
+                <DatePickerCommon
+                  name="birthDate"
+                  defaultValue={user?.birthDate}
+                  disablePast={false}
+                />
+              </div>
+
+              {/* Address */}
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Address
+                </label>
+                <input
+                  name="address"
+                  type="text"
+                  defaultValue={user?.address || ''}
+                  placeholder="Enter address"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Location */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Location
+                </label>
+                <input
+                  name="location"
+                  type="text"
+                  defaultValue={user?.location || ''}
+                  placeholder="Enter location"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Time Zone */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Time Zone
+                </label>
+                <input
+                  name="timeZone"
+                  type="text"
+                  defaultValue={user?.timeZone || ''}
+                  placeholder="e.g., UTC+7"
+                  className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Status - Only for edit mode */}
+              {state.user?.roles?.includes('ADMIN') && (
+                <div className="flex flex-col">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Status
+                  </label>
+                  <SelectCommon
+                    name="status"
+                    options={UserStatus}
+                    defaultValue={user?.status?.toString()}
+                    placeholder="Select status"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { isPending, isApproved, isRejected, isCancelled } from '@/pages/Requests/LeaveRequestsData';
+import { isPending, isApproved, isRejected, isCancelled, getStatusKey } from '@/pages/Requests/LeaveRequestsData';
 
 type DetailFieldProps = {
     label: string;
@@ -24,7 +24,7 @@ export function DetailField({ label, value, icon }: DetailFieldProps) {
 }
 
 type StatusBadgeProps = {
-    status: string | number;
+    status: number;
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
@@ -37,7 +37,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     };
 
     const styles = getStyles();
-    const displayStatus = typeof status === 'string' ? status : String(status);
+    const displayStatus = getStatusKey(status);
 
     return (
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${styles.bg}`}>

@@ -1,4 +1,4 @@
-import { useAuth } from '@/core/Auth/AuthContext';
+import { useAuth } from '@/core/auth/AuthContext';
 import { ShieldX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -6,6 +6,7 @@ export default function Forbidden() {
     const { state } = useAuth();
 
     const handleGoToHome = () => {
+        console.log("User is authenticated:", state.isAuthenticated);
         if(state.isAuthenticated)
             return "/requests";
         else

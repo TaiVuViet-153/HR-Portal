@@ -1,6 +1,5 @@
 namespace Employee.Controllers
 {
-    using Employee.Application.DTOs;
     using Employee.Application.DTOs.Request;
     using Employee.Application.Interfaces;
     using Microsoft.AspNetCore.Mvc;
@@ -39,11 +38,11 @@ namespace Employee.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update([FromBody] UpdateUserRequest dto)
         {
-            var (isSuccess, message, updatedRequest) = await userService.UpdateAsync(dto);
+            var uRes = await userService.UpdateAsync(dto);
 
-            if (!isSuccess) return BadRequest(message);
+            if (uRes == null || !uRes.Success) return BadRequest(uRes?.Message);
 
-            return Ok(updatedRequest);
+            return Ok(uRes);
         }
 
         [HttpDelete("{id}")]
@@ -65,16 +64,6 @@ namespace Employee.Controllers
 
             return Ok(newPassword);
         }
-
-        // [HttpPut("{id}/increment-failed-login")]
-        // public async Task<IActionResult> IncrementFailedLoginCount(int id)
-        // {
-        //     var (isSuccess, message, failedLoginCount) = await userService.IncrementFailedLoginCountAsync(id);
-
-        //     if (!isSuccess) return BadRequest(message);
-
-        //     return Ok(failedLoginCount);
-        // }
 
         [HttpPut("{id}/lock-user")]
         public async Task<IActionResult> LockUser(int id)

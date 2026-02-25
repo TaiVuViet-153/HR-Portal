@@ -7,7 +7,8 @@ import LeaveRequests from '@/pages/Requests/LeaveRequests'
 import Users from '@/pages/Users/Users'
 import Forbidden from '@/pages/Error/Forbidden'
 import NotFound from '@/pages/Error/NotFound'
-import ChangePasswordModal from '@/pages/Users/ChangePasswordModal'
+import LeaveBalances from '@/pages/Balances/Balances'
+import RequireChangePassword from '@/pages/Users/RequireChangePassword'
 
 export default function AppRoutes() {
     return (
@@ -21,7 +22,7 @@ export default function AppRoutes() {
 
             {/* Protected routes: RequireAuth -> MainLayout -> <Module /> */}
             <Route element={<RequireAuth />}>
-                {/* <Route path='/change-password' element={<ChangePasswordModal />} /> */}
+                <Route path='/change-password' element={<RequireChangePassword />} />
                 <Route element={<Layout />}>
                     <Route path='/' element={<Navigate to="/requests" replace/>} />
                     <Route path="/users" element={
@@ -29,9 +30,14 @@ export default function AppRoutes() {
                             <Users />
                         // </RequireRole>
                     } />
-                    <Route path="/requests" element={
+                    <Route path="/requests" element={                        
                         <RequireRole roles={['ADMIN', 'USER']}>
                             <LeaveRequests />
+                        </RequireRole>
+                    } />
+                    <Route path="/balances" element={
+                        <RequireRole roles={['ADMIN', 'USER']}>
+                            <LeaveBalances />
                         </RequireRole>
                     } />
                 </Route>

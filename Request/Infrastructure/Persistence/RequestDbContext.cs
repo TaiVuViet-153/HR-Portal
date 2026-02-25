@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Request.Application.Interfaces;
 using Request.Domain.Entities;
 
 namespace Request.Infrastructure.Persistence;
 
-public class RequestDbContext : DbContext
+public class RequestDbContext : DbContext, IUnitOfWork
 {
     public RequestDbContext(DbContextOptions<RequestDbContext> options) : base(options)
     {
@@ -25,6 +26,7 @@ public class RequestDbContext : DbContext
 
             e.Property(p => p.UserID).HasColumnName("UserID");
             e.Property(p => p.UserName).HasColumnName("UserName");
+            e.Property(p => p.Detail).HasColumnName("Detail");
             e.Property(p => p.Email).HasColumnName("Email");
 
         });
@@ -62,6 +64,11 @@ public class RequestDbContext : DbContext
             e.Property(p => p.UpdatedAt).HasColumnName("UpdatedAt");
         });
 
-
     }
+
+    public async Task<int> SaveChangeAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+    
 }

@@ -11,7 +11,6 @@ import type {
     UserResponse
 } from "@/pages/Users/UsersType";
 import { DETAIL_FIELD_MAP } from "./UsersData";
-import { useAuth } from "@/core/auth/AuthContext";
 
 export async function getUsers(query?: GetUsersQuery) {
     try {
@@ -25,7 +24,7 @@ export async function getUsers(query?: GetUsersQuery) {
         if (query?.sortBy) params.append('sortBy', query.sortBy);
         if (query?.sortDir !== undefined) params.append('sortDir', String(query.sortDir));
 
-        const res = await employeeApi.get<PagedResult<UserWithDetail>>('/api/User/', { params });
+        const res = await employeeApi.get<PagedResult<UserWithDetail>>('User/', { params });
 
         console.log("Fetched users:", res.data);
         return res.data;
@@ -38,7 +37,7 @@ export async function getUsers(query?: GetUsersQuery) {
 
 export async function getUserById(id: number) {
     try {
-        const res = await employeeApi.get<UserWithDetail>(`/api/User/${id}`);
+        const res = await employeeApi.get<UserWithDetail>(`User/${id}`);
         return res.data;
     } catch (error: any) {
         console.error("Error fetching user:", error);
@@ -55,7 +54,7 @@ export async function createUser(formData: FormData): Promise<UserResponse<Creat
     }
 
     try {
-        const res = await employeeApi.post<CreateUserResponse>('/api/User/', creatingUser);
+        const res = await employeeApi.post<CreateUserResponse>('User/', creatingUser);
         return {
             isSuccess: true,
             message: 'User created successfully',
@@ -70,7 +69,6 @@ export async function createUser(formData: FormData): Promise<UserResponse<Creat
 }
 
 export async function updateUser(selectedUser: UserWithDetail, formData: FormData): Promise<UserResponse<UpdateUserResponse> | null> {
-    const { logout } = useAuth();
     
     const data = formData ? Object.fromEntries(formData.entries()) : null;
     const detailPatch = updatingUserDetail(formData);
@@ -86,7 +84,7 @@ export async function updateUser(selectedUser: UserWithDetail, formData: FormDat
     }
 
     try {
-        const res = await employeeApi.put<UpdateUserResponse>(`/api/User/${updatingUser.userID}`, updatingUser);
+        const res = await employeeApi.put<UpdateUserResponse>(`User/${updatingUser.userID}`, updatingUser);
 
         return {
             isSuccess: true,
@@ -96,16 +94,14 @@ export async function updateUser(selectedUser: UserWithDetail, formData: FormDat
     } catch (error: any) {
         return {
             isSuccess: false,
-            message: error.response?.data || 'Failed to update user'
+            message: error?.response?.data || 'Failed to update user'
         };
-    } finally {
-
     }
 }
 
 export async function deleteUser(id: number): Promise<UserResponse<boolean> | null> {
     try {
-        const res = await employeeApi.delete<boolean>(`/api/User/${id}`);
+        const res = await employeeApi.delete<boolean>(`User/${id}`);
         return {
             isSuccess: true,
             message: 'User deleted successfully',
@@ -122,7 +118,7 @@ export async function deleteUser(id: number): Promise<UserResponse<boolean> | nu
 
 export async function resetPassword(id: number): Promise<UserResponse<string> | null> {
     try {
-        const res = await employeeApi.put<string>(`/api/User/${id}/reset-password`);
+        const res = await employeeApi.put<string>(`User/${id}/reset-password`);
         return {
             isSuccess: true,
             message: 'Password reset successfully',
@@ -139,7 +135,7 @@ export async function resetPassword(id: number): Promise<UserResponse<string> | 
 
 export async function lockUser(id: number): Promise<UserResponse<boolean> | null> {
     try {
-        const res = await employeeApi.put<boolean>(`/api/User/${id}/lock-user`);
+        const res = await employeeApi.put<boolean>(`User/${id}/lock-user`);
         return {
             isSuccess: true,
             message: 'User locked successfully',
@@ -156,7 +152,7 @@ export async function lockUser(id: number): Promise<UserResponse<boolean> | null
 
 // export async function incrementFailedLogin(id: number): Promise<UserResponse<number> | null> {
 //     try {
-//         const res = await employeeApi.put<number>(`/api/User/${id}/increment-failed-login`);
+//         const res = await employeeApi.put<number>(`User/${id}/increment-failed-login`);
 //         return {
 //             isSuccess: true,
 //             message: 'Failed login count incremented',

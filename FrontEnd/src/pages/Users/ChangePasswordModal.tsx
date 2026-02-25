@@ -1,20 +1,105 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Eye, EyeOff, Lock } from 'lucide-react';
-import type { UserWithDetail } from './UsersType';
+import { useAuth } from '@/core/auth/AuthContext';
+import { logoutApi } from '@/pages/Login/LoginApi';
+import { updateUser } from '@/pages/Users/UserApi';
+import type { UserWithDetail } from '@/pages/Users/UsersType';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  error?: string | null;
+  /** If true, closing the modal will trigger logout (required password change scenario) */
+  forceRequired?: boolean;
+  /** Title override for different scenarios */
+  title?: string;
 }
 
-export default function ChangePasswordModal({ isOpen, onClose, onSubmit, error }: ChangePasswordModalProps) {
+export default function ChangePasswordModal({ 
+  isOpen, 
+  onClose, 
+  forceRequired = false,
+  title = 'Change Password'
+}: ChangePasswordModalProps) {
+  const navigate = useNavigate();
+  const { state, logout } = useAuth();
+  
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleLogout = async () => {
+    await logoutApi();
+    logout();
+    navigate('/login', { replace: true });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const currentPassword = formData.get('currentPassword') as string;
+    const newPassword = formData.get('newPassword') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirm password do not match.');
+      return;
+    }
+
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setError('Password must be at least 8 characters with uppercase, lowercase, number and special character.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create a minimal user object for current user
+      const currentUser: UserWithDetail = {
+        userID: Number(state.user?.id) || 0,
+        userName: state.user?.name || null,
+        createdAt: '',
+        status: 1
+      };
+
+      // Create FormData with password fields
+      const passwordFormData = new FormData();
+      passwordFormData.append('currentPassword', currentPassword);
+      passwordFormData.append('newPassword', newPassword);
+
+      const result = await updateUser(currentUser, passwordFormData);
+
+      if (result?.isSuccess) {
+        // Force logout after successful password change
+        await handleLogout();
+      } else {
+        setError(result?.message || 'Failed to change password');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An error occurred while changing password');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (forceRequired) {
+      // If force required, closing means logout
+      handleLogout();
+    } else {
+      setError(null);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -25,18 +110,26 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, error }
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
               <Lock size={20} className="text-blue-600" />
             </div>
-            <h2 className="text-xl font-black text-gray-900">Change Password</h2>
+            <h2 className="text-xl font-black text-gray-900">{title}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/60 rounded-xl transition-all cursor-pointer"
-          >
-            <X size={20} className="text-gray-400" />
-          </button>
+          {!forceRequired && (
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-white/60 rounded-xl transition-all cursor-pointer"
+            >
+              <X size={20} className="text-gray-400" />
+            </button>
+          )}
         </div>
 
         {/* Form */}
-        <form onSubmit={onSubmit} className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {forceRequired && (
+            <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-700 text-sm font-medium">
+              You must change your password before continuing. This is required for security purposes.
+            </div>
+          )}
+
           {error && (
             <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">
               {error}
@@ -59,12 +152,12 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, error }
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* New Password */}
           <div className="flex flex-col">
@@ -117,18 +210,31 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, error }
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
+            {forceRequired ? (
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="px-6 py-3 font-bold text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Logout
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="px-6 py-3 font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="submit"
-              className="px-6 py-3 font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 cursor-pointer"
+              disabled={isSubmitting}
+              className="px-6 py-3 font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 cursor-pointer disabled:opacity-50"
             >
-              Change Password
+              {isSubmitting ? 'Changing...' : 'Change Password'}
             </button>
           </div>
         </form>

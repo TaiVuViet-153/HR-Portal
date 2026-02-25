@@ -84,7 +84,6 @@ public class AuthRepository(AuthDbContext _context) : IAuthRepository
             var attemptsRemaining = user.MaxAttempts - currentAttempts;
             if (attemptsRemaining == 0)
             {
-                //lock user
                 user.Status = User.UserStatus.Locked;
             }
         }

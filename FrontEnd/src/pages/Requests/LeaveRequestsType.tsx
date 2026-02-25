@@ -1,24 +1,13 @@
-export interface LeaveRequest {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  startDate: string;
-  endDate: string;
-  type: 'Annual' | 'Sick' | 'Personal';
-  status: 'Pending' | 'Approved' | 'Rejected';
-  reason: string;
-}
-
 export interface LeaveRequestResponse {
   requestId: number;
   userId: number;
   userName: string;
-  type: string;
+  type: number;
   startDate: string;
   endDate: string;
   isHalfDayOff: boolean;
   reason: string;
-  status: string;
+  status: number;
   createdAt: string;
 }
 

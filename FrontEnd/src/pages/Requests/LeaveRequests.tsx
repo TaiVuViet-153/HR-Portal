@@ -6,7 +6,7 @@ import DatePickerCommon from '@/components/common/DatePickerCommon';
 import SelectCommon from '@/components/common/SelectCommon';
 import { useAuth } from '@/core/auth/AuthContext';
 import { createRequest, deleteRequest, getRequest, updateRequest } from './RequestApi';
-import { RequestStatuses, RequestTypes, isPending, isApproved, getStatusKey } from './LeaveRequestsData';
+import { RequestStatuses, RequestTypes, isPending, isApproved, getStatusKey, isPaid, isUnpaid, getTypeKey, isRejected } from './LeaveRequestsData';
 import LeaveRequestDetailModal from './LeaveRequestDetailModal';
 import LeaveRequestFormModal from './LeaveRequestFormModal';
 import LeaveRequestDeleteModal from './LeaveRequestDeleteModal';
@@ -54,7 +54,6 @@ export default function LeaveRequests() {
       setTotalPages(data?.totalPages ?? 0);
     } catch (err) {
       setError("Fetch requests failed");
-      console.error("Fetch requests failed", err);
       setRequests([]);
     } finally {
       setLoading(false);
@@ -133,21 +132,21 @@ export default function LeaveRequests() {
     const formData = new FormData(e.target as HTMLFormElement);
 
     if (modalType === 'create') {
-      const createdRequest = await createRequest(Number(state.user?.id), formData);
-      if (createdRequest !== undefined) {
+      const result = await createRequest(Number(state.user?.id), formData);
+      if (result?.isSuccess) {
         handleClose();
         await refetchWithCurrentParams();
       } else {
-        setError("Create request failed");
+        setError(result?.message || "Create request failed");
         console.error("Create request failed");
       }
     } else if (modalType === 'edit' && selectedRequest) {
-      const updatedRequest = await updateRequest(Number(state.user?.id), selectedRequest, formData);
-      if (updatedRequest !== undefined) {
+      const result = await updateRequest(Number(state.user?.id), selectedRequest, formData);
+      if (result?.isSuccess && result.data) {
         handleClose();
-        setRequests(prev => (prev ?? []).map(r => r.requestId === updatedRequest.requestId ? updatedRequest : r));
+        setRequests(prev => (prev ?? []).map(r => r.requestId === result.data!.requestId ? result.data! : r));
       } else {
-        setError("Update request failed");
+        setError(result?.message || "Update request failed");
         console.error("Update request failed");
       }
     }
@@ -158,11 +157,13 @@ export default function LeaveRequests() {
     let handleSuccess = false;
 
     if (selectedRequest) {
-      const updatingRequest = { ...selectedRequest, status: 'Cancelled' };
-      const updatedRequest = await updateRequest(Number(state.user?.id), updatingRequest, undefined);
-      if (updatedRequest !== undefined) {
-        setRequests(prev => (prev ?? []).map(r => r.requestId === updatedRequest.requestId ? updatedRequest : r));
+      const updatingRequest = { ...selectedRequest, status: RequestStatuses.Cancelled };
+      const result = await updateRequest(Number(state.user?.id), updatingRequest, undefined);
+      if (result?.isSuccess && result.data) {
+        setRequests(prev => (prev ?? []).map(r => r.requestId === result.data!.requestId ? result.data! : r));
         handleSuccess = true;
+      } else {
+        setError(result?.message || "Cancel request failed");
       }
     }
 
@@ -177,11 +178,11 @@ export default function LeaveRequests() {
     let handleSuccess = false;
 
     if (selectedRequest) {
-      const deletedRequest = await deleteRequest(selectedRequest.requestId);
-      if (deletedRequest) {
+      const result = await deleteRequest(selectedRequest.requestId);
+      if (result?.isSuccess) {
         handleSuccess = true;
       } else {
-        setError("Delete request failed");
+        setError(result?.message || "Delete request failed");
         console.error("Delete request failed");
       }
     }
@@ -197,14 +198,14 @@ export default function LeaveRequests() {
   };
 
   const updateStatus = async (request: LeaveRequestResponse, status: number) => {
-    const updatingRequest = { ...request, status: getStatusKey(status) };
-    const updatedRequest = await updateRequest(Number(state.user?.id), updatingRequest, undefined);
+    const updatingRequest = { ...request, status: status };
+    const result = await updateRequest(Number(state.user?.id), updatingRequest);
 
-    if (updatedRequest !== undefined) {
+    if (result?.isSuccess && result.data) {
       // await refetchWithCurrentParams();
-      setRequests(prev => (prev ?? []).map(r => r.requestId === updatedRequest.requestId ? updatedRequest : r));
+      setRequests(prev => (prev ?? []).map(r => r.requestId === result.data!.requestId ? result.data! : r));
     } else {
-      setError("Update status failed");
+      setError(result?.message || "Update status failed");
       console.error("Update status failed");
     }
   };
@@ -315,15 +316,15 @@ export default function LeaveRequests() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div className="flex items-start gap-5">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                      request.type === 'Paid' ? 'bg-blue-50 text-blue-600' :
-                      request.type === 'Unpaid' ? 'bg-red-50 text-red-600' : 'bg-purple-50 text-purple-600'
+                      isPaid(request.type) ? 'bg-blue-50 text-blue-600' :
+                      isUnpaid(request.type) ? 'bg-red-50 text-red-600' : 'bg-purple-50 text-purple-600'
                     }`}>
                       <Calendar size={28} />
                     </div>
                     <div>
                       <h3 className="font-black text-xl text-gray-900">{request.userName}</h3>
                       <div className="flex items-center gap-3 text-sm font-bold text-gray-400 mt-1">
-                        <span className="text-gray-600 uppercase tracking-widest text-[10px]">{request.type} Leave</span>
+                        <span className="text-gray-600 uppercase tracking-widest text-[10px]">{getTypeKey(request.type)} Leave</span>
                         <span className="h-1 w-1 bg-gray-200 rounded-full"></span>
                         <span>{formatDate(request.startDate)} — {formatDate(request.endDate)}</span>
                         <span className="h-1 w-1 bg-gray-200 rounded-full"></span>
@@ -339,9 +340,9 @@ export default function LeaveRequests() {
                     <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
                       isPending(request.status) ? 'bg-yellow-50 text-yellow-600' :
                       isApproved(request.status) ? 'bg-green-50 text-green-600' :
-                      request.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                      isRejected(request.status) ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
                     }`}>
-                      {request.status}
+                      {getStatusKey(request.status)}
                     </span>
 
                     <div className="h-10 w-[1px] bg-gray-100 hidden md:block"></div>

@@ -8,7 +8,7 @@ using Microsoft.OpenApi.Models;
 using Request.Application;
 using Request.Infrastructure;
 using Request.Infrastructure.Persistence;
-using Shared.Notifications.Teams;
+using Shared.Infrastructures;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,12 +22,17 @@ builder.Services.AddDbContext<RequestDbContext>(options =>
 // Add Dependency Injection
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+// Add Menmory Cache
+builder.Services.AddMemoryCache();
+
+builder.Services.AddSharedLibraries(builder.Configuration);
 
 // Add Controller
 builder.Services.AddControllers();
 
 // JWT Setup
-var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]);
+var jwtSecretKey = builder.Configuration["Jwt:Key"];
+var key = string.IsNullOrEmpty(jwtSecretKey) ? [] : Encoding.UTF8.GetBytes(jwtSecretKey);
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
 
@@ -100,15 +105,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Named HttpClient cho Teams webhook (tắt auto redirect để tránh POST -> GET)
-builder.Services.AddHttpClient("teams-webhook")
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-    {
-        AllowAutoRedirect = false,         // tránh đổi phương thức
-        AutomaticDecompression = DecompressionMethods.All
-    });
-// Bind INotifier -> TeamsNotifier
-builder.Services.AddScoped<INotifier, TeamsNotifier>();
 
 // Setup CORS Policy
 var allowedOrigin = new[]

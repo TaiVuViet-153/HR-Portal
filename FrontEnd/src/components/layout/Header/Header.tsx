@@ -1,13 +1,8 @@
 import { Bell } from 'lucide-react';
-import { useAuth } from "@/core/Auth/AuthContext";
+import { useAuth } from "@/core/auth/AuthContext";
 import { useEffect, useState } from "react";
 
-
-interface HeaderProps {
-  onToggleMenu: () => void;
-}
-
-export default function Header({ onToggleMenu }: HeaderProps) {
+export default function Header() {
     const { state } = useAuth();
     const [userName, setUserName] = useState(state.user?.name ?? "Guest");
     const [userId, setUserId] = useState(state.user?.id ?? "0");
@@ -20,13 +15,6 @@ export default function Header({ onToggleMenu }: HeaderProps) {
     return (
         <header className="h-20 bg-white border-b border-gray-50 flex items-center justify-between px-6 lg:px-10 z-30 shrink-0">
             <div className="flex items-center gap-4">
-                {/* <button 
-                onClick={onToggleMenu} 
-                className="invisible lg:inline-flex p-2.5 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors active:scale-95"
-                aria-label="Toggle Menu"
-                >
-                <Menu size={22} />
-                </button> */}
                 <h2 className="hidden sm:block text-lg font-bold text-gray-800 tracking-tight">Management Console</h2>
             </div>
 

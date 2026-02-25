@@ -1,116 +1,124 @@
-using System.ComponentModel.DataAnnotations;
-using Microsoft.VisualBasic;
 using Request.Application.DTOs;
 using Request.Application.Mappings;
 using Request.Application.Interfaces;
-using Request.Application.ValueObjects;
-using Request.Common.Paging;
 using Request.Domain.Entities;
 using Request.Domain.Repositories;
 using Request.Domain.ValueObjects;
 using Request.Application.Extensions;
+using Request.Application.DTOs.Request;
+using Request.Application.Repositories;
+using Shared.Abstractions.Caching;
+using Shared.Abstractions.Paging;
+using Request.Application.DTOs.Response;
+using Shared.Abstractions.SuccessResponse;
+
+
 
 namespace Request.Application.Services;
 
 public class RequestService(
     ILeaveRepository leaveRepository,
+    IRequestRepository requestRepository,
+    IBalanceRepository balanceRepository,
     IEmailSender emailSender,
-    IEmailTemplateService emailTemplateService
+    IEmailTemplateService emailTemplateService,
+    ICacheService cacheService
 ) : IRequestService
 {
-    public async Task<RequestResult> CreateRequest(CreateRequest newRequest)
+    public async Task<SuccessResponse<RequestResponse>> CreateRequest(CreateRequest newRequest)
     {
         var request = LeaveRequestMapper.ToEntity(newRequest);
 
         var validationResult = ValidateRequest(request);
-        if (!validationResult.success)
+        if (!validationResult.Success)
             return validationResult;
 
         if (request.Type != RequestType.Unpaid)
         {
             var balance = await GetBalanceByUser(request.UserID, request.Type);
             if (balance == null)
-                return new RequestResult(false, "Leave balance not found");
+                return new SuccessResponse<RequestResponse>(false, "Leave balance not found");
 
             double leaveDays = CalculateLeaveDays(request);
 
             if (!balance.HasEnoughDays(leaveDays))
-                return new RequestResult(false, "Leave balance is not enough");
+                return new SuccessResponse<RequestResponse>(false, "Leave balance is not enough");
 
-            balance.UpdateBalance(leaveDays);
+            balance.DecreaseBalance(leaveDays);
             var updateBalanceResult = await leaveRepository.UpdateBalance(balance);
             if (updateBalanceResult == 0)
-                return new RequestResult(false, "Update balance failed");
+                return new SuccessResponse<RequestResponse>(false, "Update balance failed");
         }
 
         var insertResult = await leaveRepository.AddRequest(request);
         if (insertResult == 0)
-            return new RequestResult(false, "Create request failed");
+            return new SuccessResponse<RequestResponse>(false, "Create request failed");
 
-        var createdRequest = leaveRepository.GetUserNameForRequest(insertResult);
+        var createdRequest = await requestRepository.GetUserByRequestId(insertResult);
 
         await SendEmailNotification(createdRequest);
 
-        return new RequestResult(true, "Create request success", LeaveRequestMapper.ToViewModel(createdRequest));
+        // Invalidate cache after successful create
+        await cacheService.InvalidateByPrefixAsync(CacheKeys.LeaveRequests);
+
+
+        return new SuccessResponse<RequestResponse>(true, "Create request success", createdRequest);
     }
 
-    public async Task<PagedResult<GetRequestResult>> GetRequests(GetRequestQuery query)
+    public async Task<PagedResult<RequestResponse>> GetRequests(GetRequestQuery query)
     {
-        var data = leaveRepository.GetRequests();
+        var cacheKey = CacheKeyBuilder.Build(query);
 
-        data = FilteredRequest(data, query);
+        var result = await cacheService.GetOrCreateAsync(
+            CacheKeys.LeaveRequests,
+            cacheKey,
+            async () =>
+            {
+                return await requestRepository.GetRequests(query);
+            },
+            TimeSpan.FromMinutes(5));
 
-        var pagedEntities = await data.ToPagedResultAsync(query.Page, query.PageSize);
-
-        var mapped = pagedEntities.Items.Select(item =>
+        return result ?? new PagedResult<RequestResponse>
         {
-            var request = leaveRepository.GetUserNameForRequest(item.RequestId);
-            return LeaveRequestMapper.ToViewModel(request);
-        }).ToList();
-
-        mapped = SortMappedRequests(mapped, query).ToList();
-
-        // ========== PAGING ==========
-        return new PagedResult<GetRequestResult>
-        {
-            Items = mapped,
-            Page = pagedEntities.Page,
-            PageSize = pagedEntities.PageSize,
-            TotalItems = pagedEntities.TotalItems
+            Items = new List<RequestResponse>(),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalItems = 0
         };
     }
-    public async Task<RequestResult> UpdateRequest(UpdateRequest updateRequest)
+
+    public async Task<SuccessResponse<RequestResponse>> UpdateRequest(UpdateRequest updateRequest)
     {
-        var existedRequest = await leaveRepository.GetByRequestId(updateRequest.RequestId);
-        if (existedRequest == null) return new RequestResult(false, "Request isn't existed");
+        var existedRequest = await requestRepository.GetRequestById(updateRequest.RequestId);
+        if (existedRequest == null) return new SuccessResponse<RequestResponse>(false, "Request isn't existed");
 
         var previousStatus = existedRequest.Status;
         var request = LeaveRequestMapper.ToEntity(existedRequest, updateRequest);
 
         var validationResult = ValidateRequest(request);
-        if (!validationResult.success)
+        if (!validationResult.Success)
             return validationResult;
 
         if (request.Type != RequestType.Unpaid)
         {
             var balance = await GetBalanceByUser(request.UserID, request.Type);
             if (balance == null)
-                return new RequestResult(false, "The balance of this user is not found");
+                return new SuccessResponse<RequestResponse>(false, "The balance of this user is not found");
 
             double leaveDays = CalculateLeaveDays(request);
 
-            if (!balance.HasEnoughDays(leaveDays))
-                return new RequestResult(false, "Leave balance is not enough");
+            if (!balance.HasEnoughDays(leaveDays) && request.Status == RequestStatus.Approved)
+                return new SuccessResponse<RequestResponse>(false, "Leave balance is not enough");
 
-            balance.UpdateBalance(leaveDays);
+            balance.DecreaseBalance(leaveDays);
             await leaveRepository.UpdateBalance(balance);
         }
 
         var result = await leaveRepository.UpdateRequest(request);
         if (result == 0)
-            return new RequestResult(false, "Update request fail");
+            return new SuccessResponse<RequestResponse>(false, "Update request fail");
 
-        var updatedResult = leaveRepository.GetUserNameForRequest(result);
+        var updatedResult = await requestRepository.GetUserByRequestId(result);
 
         // Send email if status changed
         if (previousStatus != request.Status)
@@ -122,89 +130,73 @@ public class RequestService(
             await SendUpdatedEmailNotification(updatedResult, updateReason: null);
         }
 
-        return new RequestResult(true, "Update request success", LeaveRequestMapper.ToViewModel(updatedResult));
+        // Invalidate cache after successful update
+        await cacheService.InvalidateByPrefixAsync(CacheKeys.LeaveRequests);
+
+        return new SuccessResponse<RequestResponse>(true, "Update request success", updatedResult);
     }
-    public async Task<RequestResult> DeleteRequest(int requestId)
+
+    public async Task<SuccessResponse<bool>> DeleteRequest(int requestId)
     {
-        var existedRequest = await leaveRepository.GetByRequestId(requestId);
-        if (existedRequest == null) return new RequestResult(false, "Request isn't existed");
+        var existedRequest = await requestRepository.GetRequestById(requestId);
+        if (existedRequest == null) return new SuccessResponse<bool>(false, "Request isn't existed");
 
         if (existedRequest.Status == RequestStatus.Approved)
-            return new RequestResult(false, "Approved request can not be deleted");
+            return new SuccessResponse<bool>(false, "Approved request can not be deleted");
 
         existedRequest.MarkAsDeleted();
 
         var result = await leaveRepository.UpdateRequest(existedRequest);
         if (result == 0)
-            return new RequestResult(false, "Delete request fail");
+            return new SuccessResponse<bool>(false, "Delete request fail");
 
-        var deletedRequest = leaveRepository.GetUserNameForRequest(requestId);
+        var deletedRequest = await requestRepository.GetUserByRequestId(requestId);
         await SendDeletedEmailNotification(deletedRequest, deleteReason: null);
 
-        return new RequestResult(true, "Delete request success");
+        // Invalidate cache after successful delete
+        await cacheService.InvalidateByPrefixAsync(CacheKeys.LeaveRequests);
+
+        return new SuccessResponse<bool>(true, "Delete request success");
     }
-    private async Task<LeaveBalance> GetBalanceByUser(int userId, RequestType type)
+
+    private async Task<LeaveBalance> GetBalanceByUser(int userId, RequestType type, int? sourceYear = null)
     {
-        return await leaveRepository.GetBalanceByUser(userId, type);
+        return await balanceRepository.GetBalanceByUser(userId, type, sourceYear);
     }
-    private RequestResult ValidateRequest(LeaveRequest request)
+
+    private SuccessResponse<RequestResponse> ValidateRequest(LeaveRequest request)
     {
         if (!request.StartDate.HasValue || !request.EndDate.HasValue)
-            return new RequestResult(false, "Start Date or End Date is invalid");
+            return new SuccessResponse<RequestResponse>(false, "Start Date or End Date is invalid");
 
         if (request.EndDate < request.StartDate)
-            return new RequestResult(false, "End Date must be after Start Date");
+            return new SuccessResponse<RequestResponse>(false, "End Date must be after Start Date");
 
-        return new RequestResult(true, string.Empty);
+        return new SuccessResponse<RequestResponse>(true, string.Empty);
     }
+
     private double CalculateLeaveDays(LeaveRequest request)
     {
         double leaveDays = (request.EndDate.Value.Date - request.StartDate.Value.Date).Days + 1;
+        
+        DateTime start = request.StartDate.Value.Date;
+        DateTime end = request.EndDate.Value.Date;
+        
+        for (var day = start; day <= end; day = day.AddDays(1))
+        {
+            if (day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday)
+            {
+                leaveDays++;
+            }
+        }
 
         return request.IsHalfDayOff.Equals(true) ? leaveDays - 0.5 : leaveDays;
     }
-    private IEnumerable<GetRequestResult> SortMappedRequests(IEnumerable<GetRequestResult> items, GetRequestQuery query)
+
+    private async Task SendEmailNotification(RequestResponse? createdRequest)
     {
-        var sortBy = string.IsNullOrWhiteSpace(query.SortBy) ? "CreatedAt" : query.SortBy;
-        var ascending = query.SortDir == 1;
-
-        return sortBy switch
-        {
-            "RequestId" => ascending ? items.OrderBy(x => x.RequestId) : items.OrderByDescending(x => x.RequestId),
-            "Type" => ascending ? items.OrderBy(x => x.Type) : items.OrderByDescending(x => x.Type),
-            "StartDate" => ascending ? items.OrderBy(x => x.StartDate) : items.OrderByDescending(x => x.StartDate),
-            "EndDate" => ascending ? items.OrderBy(x => x.EndDate) : items.OrderByDescending(x => x.EndDate),
-            _ => ascending ? items.OrderBy(x => x.CreatedAt) : items.OrderByDescending(x => x.CreatedAt)
-        };
-    }
-    private IQueryable<LeaveRequest> FilteredRequest(IQueryable<LeaveRequest> data, GetRequestQuery query)
-    {
-        // ========== FILTER ==========
-        if (query.UserID.HasValue)
-            data = data.Where(x => x.UserID == query.UserID.Value);
-
-        if (query.Type.HasValue)
-            data = data.Where(x => (RequestType)x.Type == (RequestType)query.Type.Value);
-
-        if (query.StartDate.HasValue)
-            data = data.Where(x => x.StartDate >= query.StartDate.Value);
-
-        if (query.EndDate.HasValue)
-            data = data.Where(x => x.EndDate <= query.EndDate.Value);
-
-        if (query.IsHalfDayOff.HasValue)
-            data = data.Where(x => x.IsHalfDayOff == query.IsHalfDayOff);
-
-        if (!string.IsNullOrWhiteSpace(query.Reason))
-            data = data.Where(x => x.Reason != null && x.Reason.Contains(query.Reason));
-
-        if (query.Status.HasValue)
-            data = data.Where(x => (RequestStatus)x.Status == (RequestStatus)query.Status.Value);
-
-        return data;
-    }
-    private async Task SendEmailNotification(RequestResponse createdRequest)
-    {
+        if (createdRequest == null) return;
+    
         var emailHtml = emailTemplateService.GetLeaveRequestCreatedTemplate(
             requestId: createdRequest.RequestId,
             userName: createdRequest.UserName ?? $"User #{createdRequest.UserID}",
@@ -221,8 +213,11 @@ public class RequestService(
             emailHtml
         );
     }
-    private async Task SendUpdatedEmailNotification(RequestResponse request, string? updateReason = null)
+
+    private async Task SendUpdatedEmailNotification(RequestResponse? request, string? updateReason = null)
     {
+        if (request == null) return;
+
         var emailHtml = emailTemplateService.GetLeaveRequestUpdatedTemplate(
             requestId: request.RequestId,
             userName: request.UserName ?? $"User #{request.UserID}",
@@ -239,8 +234,11 @@ public class RequestService(
             emailHtml
         );
     }
-    private async Task SendStatusChangeEmailNotification(RequestResponse request, RequestStatus newStatus, string? updateReason = null)
+
+    private async Task SendStatusChangeEmailNotification(RequestResponse? request, RequestStatus newStatus, string? updateReason = null)
     {
+        if (request == null) return;
+
         var (mailSubjectType, emailHtml) = newStatus switch
         {
             RequestStatus.Approved => (
@@ -288,8 +286,10 @@ public class RequestService(
         }
     }
 
-    private async Task SendDeletedEmailNotification(RequestResponse request, string? deleteReason = null)
+    private async Task SendDeletedEmailNotification(RequestResponse? request, string? deleteReason = null)
     {
+        if (request == null) return;
+
         var emailHtml = emailTemplateService.GetLeaveRequestDeletedTemplate(
             requestId: request.RequestId,
             userName: request.UserName ?? $"User #{request.UserID}",
@@ -328,4 +328,5 @@ public class RequestService(
 
         await emailSender.SendAsync(message);
     }
+
 }

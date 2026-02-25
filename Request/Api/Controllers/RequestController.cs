@@ -3,19 +3,18 @@ namespace Request.Api.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Request.Application.DTOs;
+    using Request.Application.DTOs.Request;
     using Request.Application.Interfaces;
-    using Shared.Notifications.Teams;
 
     [Route("api/[controller]")]
     [ApiController]
     public class RequestController(
         IRequestService requestService,
-        IBalanceService balanceService,
-        INotifier notifier
+        IBalanceService balanceService
     )
     : ControllerBase
     {
-        [HttpGet("filteredRequests")]
+        [HttpGet]
         [Authorize]
         public async Task<IActionResult> Get([FromQuery] GetRequestQuery? query)
         {
@@ -33,6 +32,7 @@ namespace Request.Api.Controllers
 
             return Ok(createdRequest);
         }
+
         [HttpPut("updateRequest")]
         [Authorize]
         public async Task<IActionResult> UpdateRequest([FromBody] UpdateRequest updateRequest)
@@ -43,6 +43,7 @@ namespace Request.Api.Controllers
 
             return Ok(updatedRequest);
         }
+
         [HttpPatch("deleteRequest/{requestId}")]
         [Authorize]
         public async Task<IActionResult> DeleteRequest([FromRoute] int requestId)
@@ -54,15 +55,24 @@ namespace Request.Api.Controllers
             return Ok(deleteSuccess);
         }
 
-        [HttpPost("createBalance")]
-        [Authorize]
-        public async Task<IActionResult> CreateBalance([FromBody] CreateBalance newBalance)
-        {
-            var (createSuccess, message) = await balanceService.CreateBalance(newBalance);
+        // [HttpPost("createBalance")]
+        // [Authorize]
+        // public async Task<IActionResult> CreateBalance([FromBody] CreateBalanceRequest newBalance)
+        // {
+        //     var (isSuccess, message, createdBalance) = await balanceService.CreateBalance(newBalance);
 
-            if (!createSuccess) return BadRequest(message);
+        //     if (!isSuccess) return BadRequest(message);
 
-            return Ok(message);
-        }
+        //     return Ok(createdBalance);
+        // }
+
+        // [HttpGet("balances")]
+        // [Authorize]
+        // public async Task<IActionResult> GetBalances([FromQuery] GetBalanceQuery? request)
+        // {
+        //     var balances = await balanceService.GetAllAsync(request);
+
+        //     return Ok(balances);
+        // }
     }
 }
